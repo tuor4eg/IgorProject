@@ -1,22 +1,29 @@
+/**
+ * Igor Project backend server and database
+ * https://github.com/tuor4eg/
+ *
+ * @format
+ * @flow
+ */
+
+require('dotenv').config();
+
 const mysql = require('mysql');
 const Express = require('express');
 const bodyParser = require("body-parser");
 const crypto = require('crypto');
 
-
-const token = '123';
-
 const connection = mysql.createConnection({
-  host     : 'localhost',
-  user     : 'root',
-  password : '123',
-  database : 'node_test'
+  host: process.env.HOST,
+  user: process.env.USERNAME,
+  password: process.env.PASSWORD,
+  database: process.env.DATABASE
 });
 
 const app = new Express;
 
 const checkToken = (req, res, next) => {
-    if (req.headers.token === token) {
+    if (req.headers.token === process.env.TOKEN) {
         return next();
     }
     return res.end('fuck off');
