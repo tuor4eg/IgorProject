@@ -72,7 +72,6 @@ app.patch('/data/patch/:id', (req, res) => {
 });
 
 app.delete('/data/delete/:id', (req, res) => {
-    console.log('try');
     const { id } = req.params;
     const makeQuery = `delete from users_test where id = ${id}`;
     connection.query(makeQuery, (error, results) => {
