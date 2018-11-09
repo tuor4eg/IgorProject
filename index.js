@@ -22,6 +22,8 @@ const connection = mysql.createConnection({
 
 const app = new Express;
 
+//=====Middleware=====
+
 const checkToken = (req, res, next) => {
     if (req.headers.token === process.env.TOKEN) {
         return next();
@@ -35,14 +37,11 @@ app.use(checkToken);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-app.get('/data', (req, res) => {
-    connection.query('select * from users_test', (error, results) => {
-        if (error) throw error;
-        res.send(JSON.stringify(results));
-    });
-  });
+//=====User's section=====
 
-app.post('/data/login', (req, res) => {
+//==Authorize user==
+
+app.post('/users/login', (req, res) => {
     const {login, pass} = req.body;
     const md5 = hash(pass);
     const makeQuery = `select name, role from users where login = '${login}' and md5password = '${md5}'`;
@@ -51,6 +50,37 @@ app.post('/data/login', (req, res) => {
         res.send(JSON.stringify(results));
     })
 })
+
+//==Return list of users==
+
+app.get('/users/list', (req, res) => {
+    const makeQuery = `select id, name, login, role from users`
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(JSON.stringify(results));
+    });
+  });
+
+//=====Group's section=====
+
+//==Return list of groups==
+
+app.get('/groups/list', (req, res) => {
+    const makeQuery = `select groups.name as groups_name, users.name as users_name from groups join users on groups.trainerId = users.id`
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(JSON.stringify(results));
+    });
+  });
+
+//=====NADO VSE PEREPISAT!!!!!!!=====
+
+app.get('/data', (req, res) => {
+    connection.query('select * from users_test', (error, results) => {
+        if (error) throw error;
+        res.send(JSON.stringify(results));
+    });
+  });
 
 app.post('/data/post', (req, res) => {
     const {name, sum, text} = req.body;
