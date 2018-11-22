@@ -13,6 +13,26 @@ const Express = require('express');
 const bodyParser = require("body-parser");
 const crypto = require('crypto');
 
+const query = {
+    user: {
+        auth: '/user/auth',
+        list: '/user/list',
+        add: '/user/add'
+    },
+    group: {
+        list: '/group/list',
+        add: '/group/add'
+    },
+    student: {
+        add: '/student/add',
+        edit: '/student'
+    },
+    getData: '/data',
+    postData: '/data/post',
+    patchData: '/data/patch/',
+    deleteData: '/data/delete/'
+}
+
 const connection = mysql.createConnection({
   host: process.env.HOST,
   user: process.env.USERNAME,
@@ -41,7 +61,7 @@ app.use(bodyParser.json());
 
 //==Authorize user==
 
-app.post('/users/login', (req, res) => {
+app.post(query.user.auth, (req, res) => {
     const {login, pass} = req.body;
     const md5 = hash(pass);
     const makeQuery = `select name, role from users where login = '${login}' and md5password = '${md5}'`;
@@ -53,7 +73,7 @@ app.post('/users/login', (req, res) => {
 
 //==Return list of users==
 
-app.get('/users/list', (req, res) => {
+app.get(query.user.list, (req, res) => {
     const makeQuery = `select id, name, login, role from users`
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
@@ -61,17 +81,87 @@ app.get('/users/list', (req, res) => {
     });
   });
 
+//==Add user==
+
+app.post(query.user.add, (req, res) => {
+    const {userName, login, role, openPassword} = req.body;
+    const md5 = hash(openPassword);
+    const makeQuery = `insert into users (name, login, role, md5password) values ('${userName}', '${login}', '${role}', '${md5}')`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
 //=====Group's section=====
 
 //==Return list of groups==
 
-app.get('/groups/list', (req, res) => {
-    const makeQuery = `select groups.name as groups_name, users.name as users_name from groups join users on groups.trainerId = users.id`
+app.get(query.group.list, (req, res) => {
+    const makeQuery = `select groups.id as groups_id, groups.name as groups_name, users.name as users_name from groups join users on groups.trainerId = users.id`
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
         res.send(JSON.stringify(results));
     });
   });
+
+//==Add group==
+
+app.post(query.group.add, (req, res) => {
+    const {groupName, trainerId} = req.body;
+    const makeQuery = `insert into groups (name, trainerId) values ('${groupName}', '${trainerId}')`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
+//==Return list of group's students==
+
+app.get(`${query.group.list}/:id`, (req, res) => {
+    const { id } = req.params;
+    const makeQuery = `select * from students where groupId = '${id}'`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(JSON.stringify(results));
+    });
+});
+
+//==Add student into group==
+
+app.post(`${query.student.add}/:id`, (req, res) => {
+    const { id } = req.params;
+    const {studentName} = req.body;
+    const makeQuery = `insert into students (name, groupId) values ('${studentName}', '${id}')`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
+//==Edit student==
+
+app.post(`${query.student.edit}/:id`, (req, res) => {
+    const { id } = req.params;
+    const {studentName, groupId} = req.body;
+    const makeQuery = `update students set name = '${studentName}', groupId = '${groupId}' where id = '${id}'`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
+//==delete student==
+
+app.delete(`${query.student.edit}/:id`, (req, res) => {
+    console.log('kek');
+    const { id } = req.params;
+    const makeQuery = `delete from students where id = '${id}'`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
 
 //=====NADO VSE PEREPISAT!!!!!!!=====
 
