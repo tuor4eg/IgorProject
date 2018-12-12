@@ -17,20 +17,23 @@ const query = {
     user: {
         auth: '/user/auth',
         list: '/user/list',
-        add: '/user/add'
+        add: '/user/add',
+        edit: '/user'
     },
     group: {
         list: '/group/list',
-        add: '/group/add'
+        add: '/group/add',
+        edit: '/group'
     },
     student: {
         add: '/student/add',
         edit: '/student'
     },
-    getData: '/data',
-    postData: '/data/post',
-    patchData: '/data/patch/',
-    deleteData: '/data/delete/'
+    training: {
+        list: '/training/list',
+        add: '/training/add',
+        edit: '/training'
+    }
 }
 
 const connection = mysql.createConnection({
@@ -63,7 +66,7 @@ app.use(bodyParser.json());
 
 app.post(query.user.auth, (req, res) => {
     const {login, pass} = req.body;
-    const md5 = hash(pass);
+    const md5 = pass ? hash(pass) : hash('');
     const makeQuery = `select name, role from users where login = '${login}' and md5password = '${md5}'`;
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
@@ -74,7 +77,7 @@ app.post(query.user.auth, (req, res) => {
 //==Return list of users==
 
 app.get(query.user.list, (req, res) => {
-    const makeQuery = `select id, name, login, role from users`
+    const makeQuery = `select id, name, login, role, isDel from users where isDel = '0'`
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
         res.send(JSON.stringify(results));
@@ -93,12 +96,42 @@ app.post(query.user.add, (req, res) => {
     });
 });
 
+//==Edit user==
+
+app.patch(`${query.user.edit}/:id`, (req, res) => {
+    const { id } = req.params;
+    const {name, login, role, openPassword} = req.body;
+    const isPass = openPassword ? `, md5password = '${hash(openPassword)}'` : '';
+    const makeQuery = `update users set name = '${name}', login = '${login}', role = '${role}'${isPass} where id = '${id}'`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
+//==Delete user==
+
+app.delete(`${query.user.edit}/:id`, (req, res) => {
+    const { id } = req.params;
+    const makeQuery = `update users set isDel = '1' where id = '${id}'`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
 //=====Group's section=====
 
 //==Return list of groups==
 
 app.get(query.group.list, (req, res) => {
-    const makeQuery = `select groups.id as groups_id, groups.name as groups_name, users.name as users_name from groups join users on groups.trainerId = users.id`
+    const makeQuery = `select 
+    groups.id as groups_id, 
+    groups.name as groups_name, 
+    users.name as users_name, 
+    users.id as users_id 
+    from groups join users on groups.trainerId = users.id
+    where groups.isDel = '0'`
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
         res.send(JSON.stringify(results));
@@ -120,7 +153,7 @@ app.post(query.group.add, (req, res) => {
 
 app.get(`${query.group.list}/:id`, (req, res) => {
     const { id } = req.params;
-    const makeQuery = `select * from students where groupId = '${id}'`;
+    const makeQuery = `select * from students where groupId = '${id}' and isDel = '0'`;
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
         res.send(JSON.stringify(results));
@@ -141,7 +174,7 @@ app.post(`${query.student.add}/:id`, (req, res) => {
 
 //==Edit student==
 
-app.post(`${query.student.edit}/:id`, (req, res) => {
+app.patch(`${query.student.edit}/:id`, (req, res) => {
     const { id } = req.params;
     const {studentName, groupId} = req.body;
     const makeQuery = `update students set name = '${studentName}', groupId = '${groupId}' where id = '${id}'`;
@@ -151,55 +184,99 @@ app.post(`${query.student.edit}/:id`, (req, res) => {
     });
 });
 
-//==delete student==
+//==Delete student==
 
 app.delete(`${query.student.edit}/:id`, (req, res) => {
-    console.log('kek');
     const { id } = req.params;
-    const makeQuery = `delete from students where id = '${id}'`;
+    const makeQuery = `update students set isDel = '1' where id = '${id}'`;
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
         res.send(results);
     });
 });
 
-//=====NADO VSE PEREPISAT!!!!!!!=====
+//==Edit group==
 
-app.get('/data', (req, res) => {
-    connection.query('select * from users_test', (error, results) => {
-        if (error) throw error;
-        res.send(JSON.stringify(results));
-    });
-  });
-
-app.post('/data/post', (req, res) => {
-    const {name, sum, text} = req.body;
-    const makeQuery = `insert into users_test (name, sum, text) values ('${name}', '${sum}', '${text}')`;
+app.patch(`${query.group.edit}/:id`, (req, res) => {
+    const { id } = req.params;
+    const {groupId, groupName, trainerId} = req.body;
+    const makeQuery = `update groups set name = '${groupName}', trainerId = '${trainerId}' where id = '${id}'`;
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
         res.send(results);
     });
 });
 
-app.patch('/data/patch/:id', (req, res) => {
+//==Delete group==
+
+app.delete(`${query.group.edit}/:id`, (req, res) => {
     const { id } = req.params;
-    const {name, sum, text} = req.body;
-    const makeQuery = `update users_test set name = '${name}', sum = '${sum}', text = '${text}' where id = '${id}'`;
+    const makeQuery = `update groups set isDel = '1' where id = '${id}'`;
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
-        res.send('ok');
+        res.send(results);
     });
 });
 
-app.delete('/data/delete/:id', (req, res) => {
-    const { id } = req.params;
-    const makeQuery = `delete from users_test where id = ${id}`;
+app.get(`${query.training.list}`, (req, res) => {
+    const {startdate, enddate} = req.headers;
+    var condition = 'and trainings.date';
+    if (enddate === 'none') {
+        condition = `${condition} >= ${startdate}`;
+    }
+    const makeQuery = `select 
+    trainings.id as training_id, 
+    trainings.date as training_date,
+    groups.id as groups_id, 
+    groups.name as group_name,
+    users.name as trainer_name, 
+    users.id as trainer_id from trainings 
+    join users on trainings.trainerId = users.id
+    join groups on trainings.groupId = groups.id
+    where trainings.isDel = '0' ${condition}`;
+    console.log(makeQuery);
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
-        res.send('ok');
+        const map = results.map(item => {
+            const tmpDate = new Date();
+            tmpDate.setTime(item.training_date);
+            item.training_date = tmpDate.toString();
+            return item;
+          });
+        res.send(JSON.stringify(map));
     });
-})
-  
+});
+
+app.post(`${query.training.add}`, (req, res) => {
+    const {trainerId, groupId, date} = req.body;
+    const makeQuery = `insert into trainings (date, trainerId, groupId) values ('${date}', '${trainerId}', '${groupId}')`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
+app.patch(`${query.training.edit}/:id`, (req, res) => {
+    const { id } = req.params;
+    const {trainerId, date} = req.body;
+    const makeQuery = `update trainings set trainerId = '${trainerId}', date = '${date}' where id = '${id}'`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
+app.delete(`${query.training.edit}/:id`, (req, res) => {
+    const { id } = req.params;
+    const makeQuery = `update trainings set isDel = '1' where id = '${id}'`;
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(results);
+    });
+});
+
+//==Start backend server==
+
 app.listen(3000, () => {
-    console.log('Example Express app listening on port 3000!');
+    console.log('Welcome to modern new fucking awesome backend!');
   });
