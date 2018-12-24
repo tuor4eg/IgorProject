@@ -33,6 +33,11 @@ const query = {
         list: '/training/list',
         add: '/training/add',
         edit: '/training'
+    },
+    cashflows: {
+        list: '/cashflows/list',
+        add: '/cachflows/add',
+        edit: '/cashflows/edit'
     }
 }
 
@@ -153,7 +158,7 @@ app.post(query.group.add, (req, res) => {
 
 app.get(`${query.group.list}/:id`, (req, res) => {
     const { id } = req.params;
-    const makeQuery = `select * from students where groupId = '${id}' and isDel = '0'`;
+    const makeQuery = `select * from students where groupId = '${id}' and isDel = '0' order by name`;
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
         res.send(JSON.stringify(results));
@@ -199,7 +204,7 @@ app.delete(`${query.student.edit}/:id`, (req, res) => {
 
 app.patch(`${query.group.edit}/:id`, (req, res) => {
     const { id } = req.params;
-    const {groupId, groupName, trainerId} = req.body;
+    const {groupName, trainerId} = req.body;
     const makeQuery = `update groups set name = '${groupName}', trainerId = '${trainerId}' where id = '${id}'`;
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
@@ -234,7 +239,6 @@ app.get(`${query.training.list}`, (req, res) => {
     join users on trainings.trainerId = users.id
     join groups on trainings.groupId = groups.id
     where trainings.isDel = '0' ${condition}`;
-    console.log(makeQuery);
     connection.query(makeQuery, (error, results) => {
         if (error) throw error;
         const map = results.map(item => {
@@ -274,6 +278,21 @@ app.delete(`${query.training.edit}/:id`, (req, res) => {
         res.send(results);
     });
 });
+
+//=====Cashflow's section=====
+
+app.get(`${query.cashflows.list}/:trainingId`, (req, res) => {
+    const { trainingId } = req.params;
+    const makeQuery = `select 
+    id, name, cash_id, sum, notice, checkbox 
+    from students left join 
+    (select id as cash_id, studentId, sum, notice, checkbox from cashflows where trainingId = ${trainingId}) as cat 
+    on (students.id = cat.studentId) where students.isDel = 0 order by name`
+    connection.query(makeQuery, (error, results) => {
+        if (error) throw error;
+        res.send(JSON.stringify(results));
+    });
+  });
 
 //==Start backend server==
 
